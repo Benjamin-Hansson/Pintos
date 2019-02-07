@@ -13,6 +13,8 @@
 #include "threads/vaddr.h"
 #ifdef USERPROG
 #include "userprog/process.h"
+#include "filesys/filesys.h"
+#include "filesys/file.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -431,13 +433,21 @@ init_thread (struct thread *t, const char *name, int priority)
   ASSERT (t != NULL);
   ASSERT (PRI_MIN <= priority && priority <= PRI_MAX);
   ASSERT (name != NULL);
-
   memset (t, 0, sizeof *t);
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+
+  #ifdef USERPROG
+    //initiialize all slots to null
+    for(int i=0; i<128; i++){
+      t->open_files[i]=NULL;
+    }
+
+  #endif
+
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -553,3 +563,43 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+int thread_open_file(const char *file){
+    struct thread *t = thread_current();
+    for (int i = 0; i < 128; i++) {
+        if (t->open_files[i] == NULL) {
+          // filesys_open returns the new file if successful or a null pointer
+          struct file *open_file = filesys_open(file);
+          if(open_file==NULL) return -1;
+          t->open_files[i] = open_file;
+          if(t->open_files[i] != NULL){
+            // ofset by 2 since 0 and 1 is occupied by terminal
+
+            return i+2;
+          }
+          break;
+        }
+    }
+    return -1;
+}
+
+void thread_close_file(int fd, struct thread *t){
+  struct file *open_file = t->open_files[fd-2];
+  if(open_file != NULL){
+    file_close(open_file);
+    t->open_files[fd-2] =  NULL;
+  } // offset by 2
+}
+
+
+void thread_close_all_files(void){
+  struct thread *t = thread_current();
+  for(int i = 2; i < 130 ; i++) thread_close_file(i, t);
+}
+
+struct file *thread_get_file(int fd){
+  struct thread *t = thread_current();
+  struct file *file = t->open_files[fd-2];
+  return file;
+
+}

@@ -176,15 +176,12 @@ int main(void)
   {
     ERROR("Failed to read %d bytes from file, read %d.\n", strlen(testdata), bytes_read);
   }
-
   if (memcmp(sbuf, testdata, strlen(testdata)) != 0)
   {
     ERROR("Read content does not match what was written to file.\n");
   }
   close(fd);
-
   SUCCESS("TEST 5: Passed\n");
-
 
 
   TITLE("TEST 6: Reading from console\n");

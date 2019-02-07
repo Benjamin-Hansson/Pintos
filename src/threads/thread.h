@@ -88,16 +88,18 @@ struct thread
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
-    int priority;                       /* Priority. *
+    int priority;                       /* Priority. */
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-
-    // Our file descriptor handeling system
-    struct file *open_files[128];
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
+
+    // Our file descriptor handeling system
+    struct file *open_files[128];
+
+
 #endif
 
     /* Owned by thread.c. */
@@ -140,5 +142,13 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+int thread_open_file(const char *file);
+void thread_close_file(int fd, struct thread *t);
+void thread_close_all_files(void);
+struct file *thread_get_file(int fd);
+
+
+
 
 #endif /* threads/thread.h */

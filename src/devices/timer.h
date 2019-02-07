@@ -7,6 +7,17 @@
 /* Number of timer interrupts per second. */
 #define TIMER_FREQ 100
 
+/* Queue for sleeping processes
+struct sleeping_process {
+	struct thread *thread;
+	struct list_elem elem;
+};
+*/
+
+
+
+
+
 void timer_init (void);
 void timer_calibrate (void);
 
