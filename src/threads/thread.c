@@ -15,6 +15,7 @@
 #include "userprog/process.h"
 #include "filesys/filesys.h"
 #include "filesys/file.h"
+#include "devices/timer.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -114,6 +115,7 @@ thread_start (void)
 
   /* Wait for the idle thread to initialize idle_thread. */
   sema_down (&idle_started);
+
 }
 
 /* Called by the timer interrupt handler at each timer tick.
@@ -293,7 +295,8 @@ thread_exit (void)
 }
 
 /* Yields the CPU.  The current thread is not put to sleep and
-   may be scheduled again immediately at the scheduler's whim. */
+   may be scheduled again immediately at the
+   r's whim. */
 void
 thread_yield (void)
 {
@@ -533,6 +536,7 @@ schedule_tail (struct thread *prev)
 static void
 schedule (void)
 {
+
   struct thread *cur = running_thread ();
   struct thread *next = next_thread_to_run ();
   struct thread *prev = NULL;
@@ -563,6 +567,8 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+#ifdef USERPROG
 
 int thread_open_file(const char *file){
     struct thread *t = thread_current();
@@ -603,3 +609,4 @@ struct file *thread_get_file(int fd){
   return file;
 
 }
+#endif

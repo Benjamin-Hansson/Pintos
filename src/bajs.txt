@@ -1,0 +1,19 @@
+
+
+  
+  for (struct list_elem *e = list_begin(&sleeping_processes); e != list_end(&sleeping_processes);
+       e = list_next(e)) {
+      struct sleeping_process *p = list_entry(e, struct sleeping_process, elem);
+      int64_t remaining = (p->sleepy_ticky) - timer_elapsed(p->start);
+      if (remaining <= 0){
+        sema_up(&(p->s));
+        list_remove(e);
+        free(p);
+        e_to_remove() = r
+        e = prev();
+        remove(e_to_remove)
+        
+      } else{
+        return;
+      }
+    }

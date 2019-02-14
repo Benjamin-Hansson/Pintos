@@ -7,6 +7,7 @@
 #include "threads/io.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "threads/malloc.h"
 
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -29,9 +30,16 @@ static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 
+
+/* List of processes in in sleep-state, that is, processes
+   that are sleeping for TICK timer ticks. */
+static struct list sleeping_processes;
+
+
 /* Sets up the 8254 Programmable Interval Timer (PIT) to
    interrupt PIT_FREQ times per second, and registers the
    corresponding interrupt. */
+
 void
 timer_init (void)
 {
@@ -44,6 +52,9 @@ timer_init (void)
   outb (0x40, count >> 8);
 
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+
+  // Init list of sleeping processes
+  list_init (&sleeping_processes);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -96,11 +107,41 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks)
 {
-  int64_t start = timer_ticks ();
+  ASSERT (intr_get_level () == INTR_ON); // Interrupts allowed
+  struct semaphore *s = (struct semaphore*) malloc(sizeof(struct semaphore));
+  struct sleeping_process *s_process = (struct sleeping_process*) malloc(sizeof(struct sleeping_process));
 
-  ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks)
-    thread_yield ();
+  s_process->thread = thread_current();
+  s_process->target_ticks = ticks + timer_ticks();
+  s_process->s = s;
+  intr_disable(); // FRÅGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  list_insert_ordered(&sleeping_processes, &(s_process->elem), &compare_sleeping_processes, NULL); // 4th arg is auxillury
+  sema_init((s_process->s), 0);
+  sema_down(s_process->s); // FRÅGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  intr_enable();
+  list_remove(&(s_process->elem)); // Remove from list of sleeping processes
+  free(s);
+  free(s_process);
+
+}
+
+/* Sema up any sleeping process with remaining time < 0 */
+void update_sleeping_processes(void){
+  for (struct list_elem *e = list_begin(&sleeping_processes); e != list_end(&sleeping_processes);
+       e = list_next(e)) {
+      struct sleeping_process *p = list_entry(e, struct sleeping_process, elem);
+      if (p->target_ticks <= timer_ticks()){
+        sema_up((p->s));
+      } else return;
+    }
+}
+
+/* Compares two sleeping processes and returns true if a has less ticks than b remaining in sleep-state */
+bool compare_sleeping_processes(const struct list_elem *a, const struct list_elem *b, void *aux){
+  struct sleeping_process *s_process_a = list_entry(a, struct sleeping_process, elem);
+  struct sleeping_process *s_process_b = list_entry(b, struct sleeping_process, elem);
+
+  return s_process_a->target_ticks <= s_process_b->target_ticks;
 }
 
 /* Suspends execution for approximately MS milliseconds. */
@@ -137,6 +178,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+  update_sleeping_processes(); // Added by us
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

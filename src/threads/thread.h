@@ -58,7 +58,7 @@ typedef int tid_t;
 
       1. First, `struct thread' must not be allowed to grow too
          big.  If it does, then there will not be enough room for
-         the kernel stack.  Our base `struct thread' is only a
+         the kernel stack.  Our base `s  struct semaphore s;truct thread' is only a
          few bytes in size.  It probably should stay well under 1
          kB.
 
@@ -143,11 +143,13 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+
+#ifdef USERPROG
 int thread_open_file(const char *file);
 void thread_close_file(int fd, struct thread *t);
 void thread_close_all_files(void);
 struct file *thread_get_file(int fd);
-
+#endif
 
 
 
