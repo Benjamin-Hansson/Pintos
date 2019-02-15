@@ -165,7 +165,7 @@ thread_print_stats (void)
    Priority scheduling is the goal of Problem 1-3. */
 tid_t
 thread_create (const char *name, int priority,
-               thread_func *function, void *aux)
+               thread_func *function, void *aux, struct thread **child)
 {
   struct thread *t;
   struct kernel_thread_frame *kf;
@@ -198,10 +198,16 @@ thread_create (const char *name, int priority,
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
 
+  //set this thread to a child of current_thread(), this will not be run by main
+  struct thread *parent_thread = thread_current();
+  list_push_back(parent_thread->child_pcs_list, &((t->parent_pcs)->elem));
+  (t->parent_pcs)->parent = parent_thread;
+
   /* Add to run queue. */
   thread_unblock (t);
-
+  child = t;
   return tid;
+
 }
 
 /* Puts the current thread to sleep.  It will not be scheduled
@@ -449,6 +455,12 @@ init_thread (struct thread *t, const char *name, int priority)
       t->open_files[i]=NULL;
     }
 
+    list_init(&t->parent_child_list);
+    t->parent_pcs = (struct parent_child*) malloc(sizeof(struct parent_child));
+    t->parent_pcs->alive_count = 2;
+    t->parent_pcs->exit_status = 0;
+    t->blocked_by_child= (struct semaphore*) malloc(sizeof(struct semaphore));
+    sema_init(t->blocked_by_child, 0);
   #endif
 
 }
