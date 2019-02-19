@@ -9,6 +9,7 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 #include "devices/input.h"
+#include "process.h"
 
 static void syscall_handler (struct intr_frame *);
 
@@ -40,10 +41,13 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
 
     case(SYS_EXIT):
-      exit(1);
+      f->eax = exit();
       break;
     case(SYS_EXEC):
+      file = (char*) *(pointer+1);
+      f->eax = exec(file);
       break;
+
     case(SYS_WAIT):
       break;
 
@@ -189,7 +193,16 @@ int write(int fd, const char *buffer, unsigned size){
   return written_bytes;
 }
 
-void exit(int status){
-    thread_close_all_files();
+int exit(){
+    int status = thread_get_exit_status();
     thread_exit ();
+    return status;
+}
+
+tid_t exec(const char *file){
+  return process_execute(file);
+}
+
+int thread_get_exit_status() {
+  return current_thread->parent_pcs->exit_status;
 }

@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #include "filesys/filesys.h"
@@ -108,7 +109,7 @@ thread_start (void)
   /* Create the idle thread. */
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
-  thread_create ("idle", PRI_MIN, idle, &idle_started);
+  thread_create ("idle", PRI_MIN, idle, &idle_started, NULL);
 
   /* Start preemptive thread scheduling. */
   intr_enable ();
@@ -165,7 +166,7 @@ thread_print_stats (void)
    Priority scheduling is the goal of Problem 1-3. */
 tid_t
 thread_create (const char *name, int priority,
-               thread_func *function, void *aux, struct thread **child)
+               thread_func *function, void *aux, struct parent_child **pcs)
 {
   struct thread *t;
   struct kernel_thread_frame *kf;
@@ -200,12 +201,14 @@ thread_create (const char *name, int priority,
 
   //set this thread to a child of current_thread(), this will not be run by main
   struct thread *parent_thread = thread_current();
-  list_push_back(parent_thread->child_pcs_list, &((t->parent_pcs)->elem));
-  (t->parent_pcs)->parent = parent_thread;
+  list_push_back(parent_thread->parent_child_list, &((t->parent_pcs)->elem));
+  t->parent_pcs->parent = parent_thread;
+  t->parent_pcs->child = t;
 
   /* Add to run queue. */
   thread_unblock (t);
-  child = t;
+  *pcs = t->parent_pcs;
+  t->parent_pcs->child_tid = tid;
   return tid;
 
 }
@@ -455,10 +458,12 @@ init_thread (struct thread *t, const char *name, int priority)
       t->open_files[i]=NULL;
     }
 
-    list_init(&t->parent_child_list);
+    list_init(t->parent_child_list);
     t->parent_pcs = (struct parent_child*) malloc(sizeof(struct parent_child));
     t->parent_pcs->alive_count = 2;
-    t->parent_pcs->exit_status = 0;
+    t->parent_pcs->exit_status = 0; // Init to sucessfull
+    t->parent_pcs->lock = (struct lock*) malloc(sizeof(struct lock));
+    lock_init(t->parent_pcs->lock);
     t->blocked_by_child= (struct semaphore*) malloc(sizeof(struct semaphore));
     sema_init(t->blocked_by_child, 0);
   #endif

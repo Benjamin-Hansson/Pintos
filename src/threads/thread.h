@@ -81,6 +81,17 @@ typedef int tid_t;
    ready state is on the run queue, whereas only a thread in the
    blocked state is on a semaphore wait list. */
 
+
+struct parent_child {
+  int exit_status;
+  int alive_count;
+  struct thread *parent;
+  struct thread *child;
+  struct list_elem elem;
+  tid_t child_tid;
+  struct lock *lock;
+};
+
 struct thread
   {
     /* Owned by thread.c. */
@@ -98,7 +109,9 @@ struct thread
 
     // Our file descriptor handeling system
     struct file *open_files[128];
-
+    struct semaphore *blocked_by_child;
+    struct parent_child *parent_pcs;
+    struct list *parent_child_list;
 
 #endif
 
@@ -123,7 +136,7 @@ void thread_tick (void);
 void thread_print_stats (void);
 
 typedef void thread_func (void *aux);
-tid_t thread_create (const char *name, int priority, thread_func *, void *);
+tid_t thread_create (const char *name, int priority, thread_func *function, void *aux, struct parent_child **pcs);
 
 void thread_block (void);
 void thread_unblock (struct thread *);

@@ -17,6 +17,9 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/synch.h"
+#include "threads/malloc.h"
+#include <list.h>
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -39,22 +42,16 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
 
   /* Create a new thread to execute FILE_NAME. */
-  struct thread *child;
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy, child);
+  struct parent_child *pcs;
+  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy, &pcs);
 
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
-  else {
+  else {   //kolla om barnet startat korrekt
     struct thread *t = thread_current();
     sema_down(t->blocked_by_child); //stanna tills barnet säger ok
-    struct parents_pcs *parent_pcs = HITTA RÄTT BARN-parent_pcs;
-    if (parent_pcs->alive_count != 2 && parent_pcs->exit_status != 0) { // Det borde INTE gått bra att loada FILE
-      tid = TID_ERROR;
-    }
   }
-  //kolla om barnet startat korrekt
-
-  return tid;
+  return pcs->child_tid;
 }
 
 /* A thread function that loads a user process and starts it
@@ -77,22 +74,17 @@ start_process (void *file_name_)
   /* If load failed, quit. */
   palloc_free_page (file_name);
 
-  //
-
-  // Say to tell to parent to ask to benjamin what to do
-  //sätta om barnet startat korrekt eller ej
-  //sema up
-  if(sucess) {
+  // If not successfull set exit_status to -1 and sema up either way
+  if(success) {
     sema_up(thread_current()->blocked_by_child);
   } else{
 
-    //lock
-    (t->parent_pcs)->exit_status = -1;
+    t->parent_pcs->exit_status = -1;
+    t->parent_pcs->child_tid = TID_ERROR;
     sema_up(thread_current()->blocked_by_child);
     thread_exit ();
-
-    //release
   }
+
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -119,15 +111,31 @@ process_wait (tid_t child_tid UNUSED)
   return -1;
 }
 
+void free_pcs(struct parent_child *pcs) {
+  lock_acquire(pcs->lock);
+  pcs->alive_count--;
+  bool free_memory = (pcs->alive_count == 0);
+  lock_release(pcs->lock);
+  if (free_memory) {
+    free(pcs->lock);
+    free(pcs);
+  }
+}
+
 /* Free the current process's resources. */
 void
 process_exit (void)
 {
-  struct thread *cur = thread_current ();
-  (cur->parent_pcs)->alive_count--;
-  if (alive_count == 0) {
-    // Free resources
-  }
+
+ struct thread *cur = thread_current ();
+
+ while (!list_empty(cur->parent_child_list)) {
+     struct parent_child *child_pcs = list_entry(list_pop_front(cur->parent_child_list), struct parent_child, elem);
+     free_pcs(child_pcs); //if alivecount == 0
+   }
+   thread_close_all_files();
+   free(cur->blocked_by_child);
+   free_pcs(cur->parent_pcs); //if alivecount == 0
 
   uint32_t *pd;
 
