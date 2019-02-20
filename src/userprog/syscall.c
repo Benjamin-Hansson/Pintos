@@ -22,10 +22,40 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f UNUSED)
 {
-  // printf ("system call!\n");
-
-  // Save relevant info from f as variables
   int *pointer = f->esp;
+  int offset = 1;
+  int *tjackballe[30];
+  int counter = 0;
+  for (token = strtok_r (s, " ", &file); token != NULL;
+     token = strtok_r (NULL, " ", &file))
+     {
+       //store token in pointer, and add the pointer to the list
+       *pointer = token;
+       pointer -= offset;
+       tjackballe[counter] = pointer;
+       counter ++;
+     }
+  //  Word align
+  int argc = counter;
+  //FETT MYCKET BUGG MED INT, ANVÄND VOID ISTÄLLET? SNÄLLA HELP VIKTOR
+  pointer = pointer - (pointer%4);
+  tjackballe[counter] = NULL;
+  //pusha adresserna till alla argument i omvänd ordning
+  for(counter; counter =>0; counter--){
+    *pointer = tjackballe[counter];
+    pointer -= offset;
+  }
+  //få adress till första argument
+  int *argv = (pointer + offset);
+  *pointer = argv
+  pointer -= offset;
+  //pusha antal arguemnt
+  *pointer = argc;
+  pointer -= offset;
+  *pointer = 0; // Fake return adress
+
+  //första argument?
+  pointer = argv;
   int sys_call_number = *pointer;
 
   // pointer+2 pointer to third argument etc..
@@ -45,7 +75,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
     case(SYS_EXEC):
       file = (char*) *(pointer+1);
-      f->eax = exec(file);
+      f->eax = exec( file);
       break;
 
     case(SYS_WAIT):
@@ -199,8 +229,9 @@ int exit(void){
     return status;
 }
 
-tid_t exec(const char *file){
-  return process_execute(file);
+tid_t exec( const char *file){
+
+  return process_execute(file[0]);
 }
 
 int thread_get_exit_status(void) {
