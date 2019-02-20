@@ -193,7 +193,7 @@ int write(int fd, const char *buffer, unsigned size){
   return written_bytes;
 }
 
-int exit(){
+int exit(void){
     int status = thread_get_exit_status();
     thread_exit ();
     return status;
@@ -203,6 +203,6 @@ tid_t exec(const char *file){
   return process_execute(file);
 }
 
-int thread_get_exit_status() {
-  return current_thread->parent_pcs->exit_status;
+int thread_get_exit_status(void) {
+  return thread_current()->parent_pcs->exit_status;
 }
