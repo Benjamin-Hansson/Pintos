@@ -552,20 +552,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
    return success;
  }
 
-<<<<<<< HEAD
-  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-  if (kpage != NULL)
-    {
-      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-      if (success)
-        *esp = PHYS_BASE;
-      else
-        palloc_free_page (kpage);
-    }
-  return success;
-}
-=======
->>>>>>> Lab3Submission
 
 /* Adds a mapping from user virtual address UPAGE to kernel
    virtual address KPAGE to the page table.
