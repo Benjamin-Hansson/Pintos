@@ -7,8 +7,8 @@
 
    In this test, the main thread releases the locks in a different
    order compared to priority-donate-multiple.c.
-   
-   Written by Godmar Back <gback@cs.vt.edu>. 
+
+   Written by Godmar Back <gback@cs.vt.edu>.
    Based on a test originally submitted for Stanford's CS 140 in
    winter 1999 by Matt Franklin <startled@leland.stanford.edu>,
    Greg Hutchins <gmh@leland.stanford.edu>, Yu Ping Hu
@@ -25,7 +25,7 @@ static thread_func b_thread_func;
 static thread_func c_thread_func;
 
 void
-test_priority_donate_multiple2 (void) 
+test_priority_donate_multiple2 (void)
 {
   struct lock a, b;
 
@@ -41,13 +41,13 @@ test_priority_donate_multiple2 (void)
   lock_acquire (&a);
   lock_acquire (&b);
 
-  thread_create ("a", PRI_DEFAULT + 3, a_thread_func, &a);
+  thread_create ("a", PRI_DEFAULT + 3, a_thread_func, &a, NULL);
   msg ("Main thread should have priority %d.  Actual priority: %d.",
        PRI_DEFAULT + 3, thread_get_priority ());
 
-  thread_create ("c", PRI_DEFAULT + 1, c_thread_func, NULL);
+  thread_create ("c", PRI_DEFAULT + 1, c_thread_func, NULL, NULL);
 
-  thread_create ("b", PRI_DEFAULT + 5, b_thread_func, &b);
+  thread_create ("b", PRI_DEFAULT + 5, b_thread_func, &b, NULL);
   msg ("Main thread should have priority %d.  Actual priority: %d.",
        PRI_DEFAULT + 5, thread_get_priority ());
 
@@ -62,7 +62,7 @@ test_priority_donate_multiple2 (void)
 }
 
 static void
-a_thread_func (void *lock_) 
+a_thread_func (void *lock_)
 {
   struct lock *lock = lock_;
 
@@ -73,7 +73,7 @@ a_thread_func (void *lock_)
 }
 
 static void
-b_thread_func (void *lock_) 
+b_thread_func (void *lock_)
 {
   struct lock *lock = lock_;
 
@@ -84,7 +84,7 @@ b_thread_func (void *lock_)
 }
 
 static void
-c_thread_func (void *a_ UNUSED) 
+c_thread_func (void *a_ UNUSED)
 {
   msg ("Thread c finished.");
 }

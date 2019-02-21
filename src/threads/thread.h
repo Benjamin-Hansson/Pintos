@@ -1,6 +1,7 @@
 #ifndef THREADS_THREAD_H
 #define THREADS_THREAD_H
 
+#include "threads/synch.h"
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
@@ -83,13 +84,13 @@ typedef int tid_t;
 
 
 struct parent_child {
+  struct lock lock;
   int exit_status;
   int alive_count;
   struct thread *parent;
   struct thread *child;
   struct list_elem elem;
   tid_t child_tid;
-  struct lock *lock;
 };
 
 struct thread
@@ -108,10 +109,10 @@ struct thread
     uint32_t *pagedir;                  /* Page directory. */
 
     // Our file descriptor handeling system
+    struct semaphore blocked_by_child;
     struct file *open_files[128];
-    struct semaphore *blocked_by_child;
     struct parent_child *parent_pcs;
-    struct list *parent_child_list;
+    struct list parent_child_list;
 
 #endif
 
