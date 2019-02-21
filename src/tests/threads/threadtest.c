@@ -1,12 +1,12 @@
-// threadtest.c 
+// threadtest.c
 //	Simple test case for the threads assignment.
 //
 //	Create seven threads, and have them context switch
-//	back and forth between themselves by calling Thread::Yield, 
+//	back and forth between themselves by calling Thread::Yield,
 //	to illustrate the inner workings of the thread system.
 //
 // Copyright (c) 1992-1993 The Regents of the University of California.
-// All rights reserved.  See copyright.h for copyright notice and limitation 
+// All rights reserved.  See copyright.h for copyright notice and limitation
 // of liability and disclaimer of warranty provisions.
 //
 // Modified by Levon Saldamli.
@@ -81,7 +81,7 @@ void WaitForStart(void);
 void Producer(void *index);
 void Consumer(void *index);
 
-void data_init(struct Data *data, char ch, char* s, int i) 
+void data_init(struct Data *data, char ch, char* s, int i)
 {
   data->c = ch;
   data->sender = s;
@@ -148,12 +148,12 @@ Consumer(void *index)
     lock_release(&readlock[buf]);
 
     if (data->c != 0);
-      /*      DEBUG('c', "%s received from %s: %c\n", 
-	    currentThread->getName(), 
+      /*      DEBUG('c', "%s received from %s: %c\n",
+	    currentThread->getName(),
 	    data->sender,
 	    data->c);*/
     else
-      printf("\n%s: %s's total message was: \n\"%s\"\n", 
+      printf("\n%s: %s's total message was: \n\"%s\"\n",
 	     thread_name(),
 	     data->sender,
 	     received_msg_array[i]);
@@ -217,7 +217,7 @@ ThreadTest(void)
       //received_msg_array[i] = new char[strlen(msg_array[i])+1];
       received_msg_pos[i] = 0;
       //      printf("Creating thread with the name: %s\n",str);
-      thread_create(str, PRI_MIN, Producer, (void *) i);
+      thread_create(str, PRI_MIN, Producer, (void *) i, NULL);
       free(str);
       //      Thread *t = new Thread(str);
       //      t->Fork(Producer, i);
@@ -227,7 +227,7 @@ ThreadTest(void)
       //char *str = new char[strlen(cname)+4];
       snprintf(str, strlen(cname)+4,"%s %02d", cname, i);
       //      printf("Creating thread with the name: %s\n",str);
-      thread_create(str, PRI_MIN, Consumer, (void *) i);
+      thread_create(str, PRI_MIN, Consumer, (void *) i, NULL);
       free(str);
       //Thread *t = new Thread(str);
       //t->Fork(Consumer, i);

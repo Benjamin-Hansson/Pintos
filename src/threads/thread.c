@@ -199,16 +199,31 @@ thread_create (const char *name, int priority,
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
 
+  #ifdef USERPROG
   //set this thread to a child of current_thread(), this will not be run by main
+
+
+
+  t->parent_pcs = (struct parent_child*) malloc(sizeof(struct parent_child));
+  t->parent_pcs->alive_count = 2;
+  t->parent_pcs->exit_status = 0; // Init to sucessfull
+  lock_init(&(t->parent_pcs->lock));
+
+
   struct thread *parent_thread = thread_current();
-  list_push_back(parent_thread->parent_child_list, &((t->parent_pcs)->elem));
+
+  list_push_back(&(parent_thread->parent_child_list), &(t->parent_pcs->elem));
   t->parent_pcs->parent = parent_thread;
   t->parent_pcs->child = t;
 
+
   /* Add to run queue. */
-  thread_unblock (t);
-  *pcs = t->parent_pcs;
+
+  if(pcs != NULL) *pcs = t->parent_pcs;
   t->parent_pcs->child_tid = tid;
+  #endif
+  thread_unblock (t);
+
   return tid;
 
 }
@@ -453,19 +468,13 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
 
   #ifdef USERPROG
-    //initiialize all slots to null
-    for(int i=0; i<128; i++){
-      t->open_files[i]=NULL;
-    }
+  //initiialize all slots to null
+  for(int i=0; i<128; i++){
+    t->open_files[i]=NULL;
+  }
+  list_init(&(t->parent_child_list));
+  sema_init(&(t->blocked_by_child), 0);
 
-    list_init(t->parent_child_list);
-    t->parent_pcs = (struct parent_child*) malloc(sizeof(struct parent_child));
-    t->parent_pcs->alive_count = 2;
-    t->parent_pcs->exit_status = 0; // Init to sucessfull
-    t->parent_pcs->lock = (struct lock*) malloc(sizeof(struct lock));
-    lock_init(t->parent_pcs->lock);
-    t->blocked_by_child= (struct semaphore*) malloc(sizeof(struct semaphore));
-    sema_init(t->blocked_by_child, 0);
   #endif
 
 }
