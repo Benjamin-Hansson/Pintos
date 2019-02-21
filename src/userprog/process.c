@@ -133,7 +133,7 @@ process_exit (void)
      free_pcs(child_pcs); //if alivecount == 0
    }
    thread_close_all_files();
-   free_pcs(cur->parent_pcs); //if alivecount == 0
+   if(cur->parent_pcs != NULL) free_pcs(cur->parent_pcs); // Main thread doesn't have a parent_pcs
 
   uint32_t *pd;
 
@@ -273,22 +273,27 @@ load (char *file_name, void (**eip) (void), void **esp)
   for (token = strtok_r (file_name, " ", &save_ptr); token != NULL;
      token = strtok_r (NULL, " ", &save_ptr))
      {
-       *esp -= (strlen(token) +1); // do +1 to include \0
-       strlcpy(*(char**)esp, token, strlen(token));
+       printf("token: %s\n", token);
+       *esp -= (strlen(token)+1); // do +1 to include \0
+       printf("esp: %x\n", (int)*esp);
+       strlcpy(*(char**)esp, token, strlen(token)+1);
        arg_ptrs[counter] = *(char**)esp;
        counter ++;
      }
   int argc = counter;
-  *esp -= ((*(int*)esp) % offset); // Word align
-  //argv[argc] == NULL
-  arg_ptrs[counter] = NULL;
-  //pusha adresserna till alla argument i omvänd ordning
-  for(counter; counter >= 0; counter--){
-    **(char***)esp = arg_ptrs[counter];
-    *esp -= offset;
-  }
+  printf("word align: %d\n", ((*(uint8_t*)esp) % offset));
+  *esp -= ((*(uint8_t*)esp) % offset); // Word align
 
+  arg_ptrs[counter] = NULL;   // makes argv[argc] = NULL
+
+  //pusha adresserna till alla argument i omvänd ordning
+  for(; counter >= 0; counter--){
+    *esp -= offset;
+    **(char***)esp = arg_ptrs[counter];
+  }
+  *esp -= offset;
   **(char****)esp = ((char**)((*esp) + offset)); // skjut mig och save adress of adress above esp in argv
+
   *esp -= offset;
   //pusha antal arguemnt
   **(int**)esp = argc;
@@ -298,7 +303,7 @@ load (char *file_name, void (**eip) (void), void **esp)
    /* Uncomment the following line to print some debug
      information. This will be useful when you debug the program
      stack.*/
-/*#define STACK_DEBUG*/
+#define STACK_DEBUG
 
 #ifdef STACK_DEBUG
   printf("*esp is %p\nstack contents:\n", *esp);
@@ -545,7 +550,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
      {
        success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
        if (success)
-         *esp = PHYS_BASE -12;
+         *esp = PHYS_BASE;
        else
          palloc_free_page (kpage);
      }
