@@ -22,7 +22,7 @@
 #include <list.h>
 
 static thread_func start_process NO_RETURN;
-static bool load (const char *cmdline, void (**eip) (void), void **esp);
+static bool load (char *cmdline, void (**eip) (void), void **esp);
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -247,8 +247,9 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool
-load (const char *file_name, void (**eip) (void), void **esp)
+load (char *file_name, void (**eip) (void), void **esp)
 {
+
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
   struct file *file = NULL;
@@ -266,6 +267,35 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (!setup_stack (esp)){
     goto done;
   }
+
+  int offset = 4;
+  char *arg_ptrs[30];
+  int counter = 0;
+  char *token, *save_ptr;
+  for (token = strtok_r (file_name, " ", &save_ptr); token != NULL;
+     token = strtok_r (NULL, " ", &save_ptr))
+     {
+       *esp -= (strlen(token) +1); // do +1 to include \0
+       strlcpy(*(char**)esp, token, strlen(token));
+       arg_ptrs[counter] = *(char**)esp;
+       counter ++;
+     }
+  int argc = counter;
+  *esp -= ((*(int*)esp) % offset); // Word align
+  //argv[argc] == NULL
+  arg_ptrs[counter] = NULL;
+  //pusha adresserna till alla argument i omvänd ordning
+  for(counter; counter >= 0; counter--){
+    **(char***)esp = arg_ptrs[counter];
+    *esp -= offset;
+  }
+
+  **(char****)esp = ((char**)((*esp) + offset)); // skjut mig och save adress of adress above esp in argv
+  *esp -= offset;
+  //pusha antal arguemnt
+  **(int**)esp = argc;
+  *esp -= offset;
+  **(void ***)esp = NULL; // Fake return adress
 
    /* Uncomment the following line to print some debug
      information. This will be useful when you debug the program

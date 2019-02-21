@@ -22,40 +22,8 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f UNUSED)
 {
-  int *pointer = f->esp;
-  int offset = 1;
-  int *tjackballe[30];
-  int counter = 0;
-  for (token = strtok_r (s, " ", &file); token != NULL;
-     token = strtok_r (NULL, " ", &file))
-     {
-       //store token in pointer, and add the pointer to the list
-       *pointer = token;
-       pointer -= offset;
-       tjackballe[counter] = pointer;
-       counter ++;
-     }
-  //  Word align
-  int argc = counter;
-  //FETT MYCKET BUGG MED INT, ANVÄND VOID ISTÄLLET? SNÄLLA HELP VIKTOR
-  pointer = pointer - (pointer%4);
-  tjackballe[counter] = NULL;
-  //pusha adresserna till alla argument i omvänd ordning
-  for(counter; counter =>0; counter--){
-    *pointer = tjackballe[counter];
-    pointer -= offset;
-  }
-  //få adress till första argument
-  int *argv = (pointer + offset);
-  *pointer = argv
-  pointer -= offset;
-  //pusha antal arguemnt
-  *pointer = argc;
-  pointer -= offset;
-  *pointer = 0; // Fake return adress
 
-  //första argument?
-  pointer = argv;
+  int *pointer = f->esp;
   int sys_call_number = *pointer;
 
   // pointer+2 pointer to third argument etc..
