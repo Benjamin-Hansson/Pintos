@@ -32,7 +32,7 @@ test_mlfqs_block (void)
   lock_acquire (&lock);
 
   msg ("Main thread creating block thread, sleeping 25 seconds...");
-  thread_create ("block", PRI_DEFAULT, block_thread, &lock, NULL);
+  thread_create ("block", PRI_DEFAULT, block_thread, &lock);
   timer_sleep (25 * TIMER_FREQ);
 
   msg ("Main thread spinning for 5 seconds...");

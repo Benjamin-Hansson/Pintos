@@ -217,7 +217,7 @@ ThreadTest(void)
       //received_msg_array[i] = new char[strlen(msg_array[i])+1];
       received_msg_pos[i] = 0;
       //      printf("Creating thread with the name: %s\n",str);
-      thread_create(str, PRI_MIN, Producer, (void *) i, NULL);
+      thread_create(str, PRI_MIN, Producer, (void *) i);
       free(str);
       //      Thread *t = new Thread(str);
       //      t->Fork(Producer, i);
@@ -227,7 +227,7 @@ ThreadTest(void)
       //char *str = new char[strlen(cname)+4];
       snprintf(str, strlen(cname)+4,"%s %02d", cname, i);
       //      printf("Creating thread with the name: %s\n",str);
-      thread_create(str, PRI_MIN, Consumer, (void *) i, NULL);
+      thread_create(str, PRI_MIN, Consumer, (void *) i);
       free(str);
       //Thread *t = new Thread(str);
       //t->Fork(Consumer, i);

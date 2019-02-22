@@ -30,7 +30,7 @@ test_priority_condvar (void)
       int priority = PRI_DEFAULT - (i + 7) % 10 - 1;
       char name[16];
       snprintf (name, sizeof name, "priority %d", priority);
-      thread_create (name, priority, priority_condvar_thread, NULL, NULL);
+      thread_create (name, priority, priority_condvar_thread, NULL);
     }
 
   for (i = 0; i < 10; i++)

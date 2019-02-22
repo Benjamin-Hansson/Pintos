@@ -94,7 +94,6 @@ thread_init (void)
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
-  //TODO
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
@@ -109,7 +108,7 @@ thread_start (void)
   /* Create the idle thread. */
   struct semaphore idle_started;
   sema_init (&idle_started, 0);
-  thread_create ("idle", PRI_MIN, idle, &idle_started, NULL);
+  thread_create ("idle", PRI_MIN, idle, &idle_started);
 
   /* Start preemptive thread scheduling. */
   intr_enable ();
@@ -166,7 +165,7 @@ thread_print_stats (void)
    Priority scheduling is the goal of Problem 1-3. */
 tid_t
 thread_create (const char *name, int priority,
-               thread_func *function, void *aux, struct parent_child **pcs)
+               thread_func *function, void *aux)
 {
   struct thread *t;
   struct kernel_thread_frame *kf;
@@ -201,14 +200,10 @@ thread_create (const char *name, int priority,
 
   #ifdef USERPROG
   //set this thread to a child of current_thread(), this will not be run by main
-
-
-
   t->parent_pcs = (struct parent_child*) malloc(sizeof(struct parent_child));
   t->parent_pcs->alive_count = 2;
   t->parent_pcs->exit_status = 0; // Init to sucessfull
-  lock_init(&(t->parent_pcs->lock));
-
+  lock_init(&(t->parent_pcs->alive_count_lock));
 
   struct thread *parent_thread = thread_current();
 
@@ -216,11 +211,7 @@ thread_create (const char *name, int priority,
   t->parent_pcs->parent = parent_thread;
   t->parent_pcs->child = t;
 
-
   /* Add to run queue. */
-
-  if(pcs != NULL) *pcs = t->parent_pcs;
-  t->parent_pcs->child_tid = tid;
   #endif
   thread_unblock (t);
 
@@ -307,6 +298,7 @@ thread_exit (void)
   ASSERT (!intr_context ());
 
 #ifdef USERPROG
+
   process_exit ();
 #endif
 
@@ -472,8 +464,10 @@ init_thread (struct thread *t, const char *name, int priority)
   for(int i=0; i<128; i++){
     t->open_files[i]=NULL;
   }
+
   list_init(&(t->parent_child_list));
   sema_init(&(t->blocked_by_child), 0);
+
 
   #endif
 
@@ -634,5 +628,10 @@ struct file *thread_get_file(int fd){
   struct file *file = t->open_files[fd-2];
   return file;
 
+}
+
+void thread_save_exit_status(int status){
+  struct thread *t = thread_current();
+  if (t->parent_pcs != NULL) t->parent_pcs->exit_status = status;
 }
 #endif

@@ -61,7 +61,7 @@ SimpleThreadTest(void)
 	char *t_name = "forked thread";
 	printf("Entering SimpleTest");
 
-	thread_create(t_name, PRI_MIN, SimpleThread, (void *)1, NULL);
+	thread_create(t_name, PRI_MIN, SimpleThread, (void *)1);
 
 //    t->Fork(SimpleThread, 1);
     SimpleThread((void *)0);

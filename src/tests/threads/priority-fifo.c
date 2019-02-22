@@ -60,7 +60,7 @@ test_priority_fifo (void)
       d->iterations = 0;
       d->lock = &lock;
       d->op = &op;
-      thread_create (name, PRI_DEFAULT + 1, simple_thread_func, d, NULL);
+      thread_create (name, PRI_DEFAULT + 1, simple_thread_func, d);
     }
 
   thread_set_priority (PRI_DEFAULT);

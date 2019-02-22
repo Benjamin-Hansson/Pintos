@@ -91,7 +91,7 @@ test_mlfqs_fair (int thread_cnt, int nice_min, int nice_step)
       ti->nice = nice;
 
       snprintf(name, sizeof name, "load %d", i);
-      thread_create (name, PRI_DEFAULT, load_thread, ti, NULL);
+      thread_create (name, PRI_DEFAULT, load_thread, ti);
 
       nice += nice_step;
     }

@@ -32,14 +32,15 @@ syscall_handler (struct intr_frame *f UNUSED)
   char *file;
   unsigned initial_size;
   int fd;
-
+  int exit_status;
   switch(sys_call_number){
     case(SYS_HALT):
       halt();
       break;
 
     case(SYS_EXIT):
-      f->eax = exit();
+      exit_status = (int) *(pointer+1);
+      exit(exit_status);
       break;
     case(SYS_EXEC):
       file = (char*) *(pointer+1);
@@ -191,17 +192,11 @@ int write(int fd, const char *buffer, unsigned size){
   return written_bytes;
 }
 
-int exit(void){
-    int status = thread_get_exit_status();
-    thread_exit ();
-    return status;
+void exit(int exit_status){
+    thread_save_exit_status(exit_status);
+    thread_exit();
 }
 
 tid_t exec( const char *file){
-
-  return process_execute(file[0]);
-}
-
-int thread_get_exit_status(void) {
-  return thread_current()->parent_pcs->exit_status;
+  return process_execute(file);
 }

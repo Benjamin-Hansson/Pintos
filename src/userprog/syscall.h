@@ -10,7 +10,6 @@ int write(int fd, const char *buffer, unsigned size);
 void close(int fd);
 int read_from_console(void* buffer, unsigned size);
 int read (int fd, void *buffer, unsigned size);
-int exit(void);
+void exit(int exit_status);
 tid_t exec(const char *file);
-int thread_get_exit_status(void);
 #endif /* userprog/syscall.h */

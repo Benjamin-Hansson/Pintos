@@ -84,18 +84,23 @@ typedef int tid_t;
 
 
 struct parent_child {
-  struct lock lock;
   int exit_status;
   int alive_count;
+  struct lock alive_count_lock;
+
   struct thread *parent;
   struct thread *child;
+
   struct list_elem elem;
+
   tid_t child_tid;
+  bool tid_error;
 };
 
 struct thread
   {
     /* Owned by thread.c. */
+
     tid_t tid;                          /* Thread identifier. */
     enum thread_status status;          /* Thread state. */
     char name[16];                      /* Name (for debugging purposes). */
@@ -109,8 +114,9 @@ struct thread
     uint32_t *pagedir;                  /* Page directory. */
 
     // Our file descriptor handeling system
-    struct semaphore blocked_by_child;
     struct file *open_files[128];
+
+    struct semaphore blocked_by_child;
     struct parent_child *parent_pcs;
     struct list parent_child_list;
 
@@ -137,7 +143,7 @@ void thread_tick (void);
 void thread_print_stats (void);
 
 typedef void thread_func (void *aux);
-tid_t thread_create (const char *name, int priority, thread_func *function, void *aux, struct parent_child **pcs);
+tid_t thread_create (const char *name, int priority, thread_func *function, void *aux);
 
 void thread_block (void);
 void thread_unblock (struct thread *);
@@ -163,6 +169,7 @@ int thread_open_file(const char *file);
 void thread_close_file(int fd, struct thread *t);
 void thread_close_all_files(void);
 struct file *thread_get_file(int fd);
+void thread_save_exit_status(int status);
 #endif
 
 

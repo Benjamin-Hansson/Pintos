@@ -42,16 +42,32 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
 
   /* Create a new thread to execute FILE_NAME. */
-  struct parent_child *pcs;
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy, &pcs);
+
+  tid = thread_create(file_name, PRI_DEFAULT, start_process, fn_copy);
 
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
   else {   //kolla om barnet startat korrekt
+
     struct thread *t = thread_current();
     sema_down(&(t->blocked_by_child)); //stanna tills barnet säger ok
+
+    //loopa tills rätt tid är hittat, kolla på bool tid_error
+    struct list_elem *e;
+    for (e = list_begin (&t->parent_child_list); e != list_end (&t->parent_child_list);
+         e = list_next (e))
+      {
+        struct parent_child *pcs = list_entry (e, struct parent_child, elem);
+        if(pcs->child_tid == tid ){
+          if(pcs->tid_error == true){
+            return TID_ERROR;
+          }else{
+            break;
+          }
+        }
+      }
   }
-  return pcs->child_tid;
+  return tid; // child_tid is set by child by the time sema_up has ran and this process continues
 }
 
 /* A thread function that loads a user process and starts it
@@ -76,12 +92,11 @@ start_process (void *file_name_)
 
   // If not successfull set exit_status to -1 and sema up either way
   if(success) {
-    sema_up(&(thread_current()->blocked_by_child));
+    sema_up(&(t->parent_pcs->parent->blocked_by_child));
   } else{
-
     t->parent_pcs->exit_status = -1;
-    t->parent_pcs->child_tid = TID_ERROR;
-    sema_up(&(thread_current()->blocked_by_child));
+    t->parent_pcs->tid_error = true;
+    sema_up(&(t->parent_pcs->parent->blocked_by_child));
     thread_exit ();
   }
 
@@ -107,15 +122,14 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED)
 {
-  //while(1){};
   return -1;
 }
 
 void free_pcs(struct parent_child *pcs) {
-  lock_acquire(&(pcs->lock));
+  lock_acquire(&(pcs->alive_count_lock));
   pcs->alive_count--;
   bool free_memory = (pcs->alive_count == 0);
-  lock_release(&(pcs->lock));
+  lock_release(&(pcs->alive_count_lock));
   if (free_memory) {
     free(pcs);
   }
@@ -267,36 +281,34 @@ load (char *file_name, void (**eip) (void), void **esp)
   }
 
   int offset = 4;
-  char *arg_ptrs[30];
+  char *arg_ptrs[32];
   int counter = 0;
   char *token, *save_ptr;
+  // push arguments on stack in order
   for (token = strtok_r (file_name, " ", &save_ptr); token != NULL;
      token = strtok_r (NULL, " ", &save_ptr))
      {
-       printf("token: %s\n", token);
        *esp -= (strlen(token)+1); // do +1 to include \0
-       printf("esp: %x\n", (int)*esp);
        strlcpy(*(char**)esp, token, strlen(token)+1);
-       arg_ptrs[counter] = *(char**)esp;
+       arg_ptrs[counter] = *(char**)esp; // save adress of first char of arg
        counter ++;
      }
-  int argc = counter;
-  printf("word align: %d\n", ((*(uint8_t*)esp) % offset));
+
+  int argc = counter; // will be pushed later
   *esp -= ((*(uint8_t*)esp) % offset); // Word align
+  arg_ptrs[counter] = NULL;   // makes argv[argc] = NULL, as required by C standards
 
-  arg_ptrs[counter] = NULL;   // makes argv[argc] = NULL
-
-  //pusha adresserna till alla argument i omvänd ordning
+  //push pointers to arguments in reverse order to be able to pop them in right order
   for(; counter >= 0; counter--){
     *esp -= offset;
     **(char***)esp = arg_ptrs[counter];
   }
-  *esp -= offset;
-  **(char****)esp = ((char**)((*esp) + offset)); // skjut mig och save adress of adress above esp in argv
 
   *esp -= offset;
-  //pusha antal arguemnt
-  **(int**)esp = argc;
+  **(char****)esp = ((char**)((*esp) + offset)); // push argb - ie adress of adress above esp in argv
+
+  *esp -= offset;
+  **(int**)esp = argc; //push argc
   *esp -= offset;
   **(void ***)esp = NULL; // Fake return adress
 
