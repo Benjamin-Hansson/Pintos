@@ -205,12 +205,15 @@ thread_create (const char *name, int priority,
   t->parent_pcs->exit_status = 0; // Init to sucessfull
   lock_init(&(t->parent_pcs->alive_count_lock));
 
+  t->parent_pcs->has_waited = false;
+  sema_init(&(t->parent_pcs->waiting_sema), 0);
+
   struct thread *parent_thread = thread_current();
 
   list_push_back(&(parent_thread->parent_child_list), &(t->parent_pcs->elem));
   t->parent_pcs->parent = parent_thread;
   t->parent_pcs->child = t;
-
+  t->parent_pcs->child_tid = tid;
   /* Add to run queue. */
   #endif
   thread_unblock (t);

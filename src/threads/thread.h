@@ -95,6 +95,10 @@ struct parent_child {
 
   tid_t child_tid;
   bool tid_error;
+
+  // Used for wait()
+  bool has_waited;
+  struct semaphore waiting_sema;
 };
 
 struct thread

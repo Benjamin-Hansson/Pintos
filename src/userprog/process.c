@@ -122,7 +122,24 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED)
 {
-  return -1;
+  if(child_tid == TID_ERROR) return -1;
+
+  // Find child
+  struct thread *t = thread_current();
+  struct list_elem *e;
+  for (e = list_begin (&t->parent_child_list); e != list_end (&t->parent_child_list);
+       e = list_next (e)) {
+      struct parent_child *pcs = list_entry (e, struct parent_child, elem);
+
+      if(pcs->child_tid == child_tid ){ // child found
+        if (pcs->has_waited) return -1;
+        pcs->has_waited = true;
+        sema_down(&(pcs->waiting_sema)); // wait for child
+
+        return pcs->exit_status;
+      }
+    }
+    return -1;
 }
 
 void free_pcs(struct parent_child *pcs) {
@@ -147,7 +164,10 @@ process_exit (void)
      free_pcs(child_pcs); //if alivecount == 0
    }
    thread_close_all_files();
-   if(cur->parent_pcs != NULL) free_pcs(cur->parent_pcs); // Main thread doesn't have a parent_pcs
+   if(cur->parent_pcs != NULL){ // Main thread doesn't have a parent_pcs
+     sema_up(&(cur->parent_pcs->waiting_sema));
+     free_pcs(cur->parent_pcs);
+   }
 
   uint32_t *pd;
 
@@ -287,8 +307,8 @@ load (char *file_name, void (**eip) (void), void **esp)
   // push arguments on stack in order
   for (token = strtok_r (file_name, " ", &save_ptr); token != NULL;
      token = strtok_r (NULL, " ", &save_ptr))
+     *esp -= (strlen(token)+1); // do +1 to include \0
      {
-       *esp -= (strlen(token)+1); // do +1 to include \0
        strlcpy(*(char**)esp, token, strlen(token)+1);
        arg_ptrs[counter] = *(char**)esp; // save adress of first char of arg
        counter ++;

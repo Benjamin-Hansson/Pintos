@@ -22,17 +22,20 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f UNUSED)
 {
-
+  validate_pointer(f);
   int *pointer = f->esp;
+  validate_pointer(pointer);
   int sys_call_number = *pointer;
 
-  // pointer+2 pointer to third argument etc..
+  //variable declarations
   void *buffer;
   unsigned size;
   char *file;
   unsigned initial_size;
   int fd;
   int exit_status;
+  pid_t pid;
+
   switch(sys_call_number){
     case(SYS_HALT):
       halt();
@@ -44,10 +47,12 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
     case(SYS_EXEC):
       file = (char*) *(pointer+1);
-      f->eax = exec( file);
+      f->eax = exec(file);
       break;
 
     case(SYS_WAIT):
+      pid = (pid_t*) *(pointer+1);
+      f->eax = wait(pid);
       break;
 
     case(SYS_CREATE):
@@ -111,6 +116,18 @@ syscall_handler (struct intr_frame *f UNUSED)
   }
 
 }
+
+// can be dereferenced after passing this test
+bool validate_pointer(void f){
+  if(is_user_vaddr (f) ){
+    struct thread *t = current_thread();
+    if(pagedir_get_page(t->pagedir, f) != NULL) {
+      return true;
+    }
+  return false;
+}
+
+
 
 void halt(void){
   printf("powering off\n");
@@ -197,6 +214,10 @@ void exit(int exit_status){
     thread_exit();
 }
 
-tid_t exec( const char *file){
+tid_t exec(const char *file){
   return process_execute(file);
+}
+
+int wait(pid_t pid) {
+  return process_wait(pid);
 }
