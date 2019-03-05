@@ -457,7 +457,9 @@ init_thread (struct thread *t, const char *name, int priority)
   ASSERT (name != NULL);
   memset (t, 0, sizeof *t);
   t->status = THREAD_BLOCKED;
+  char *save_ptr;
   strlcpy (t->name, name, sizeof t->name);
+  strtok_r (t->name, " ", &save_ptr);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;

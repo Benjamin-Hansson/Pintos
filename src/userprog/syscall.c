@@ -24,8 +24,6 @@ static void
 syscall_handler (struct intr_frame *f UNUSED)
 {
   struct thread *t= thread_current();
-
-  validate_ptr(f, t);
   validate_ptr(f->esp, t);
   int *pointer = f->esp;
   int sys_call_number = *pointer;
@@ -38,7 +36,6 @@ syscall_handler (struct intr_frame *f UNUSED)
   int fd;
   int exit_status;
   pid_t pid;
-
 
   switch(sys_call_number){
     case(SYS_HALT):
@@ -108,6 +105,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       fd = *(pointer+1);
       buffer = (char*)(pointer+2);
       size = (unsigned) *(pointer +3);
+      validate_buffer(buffer, size);
       f->eax = write(fd, buffer, size);
       break;
 
@@ -162,10 +160,11 @@ void validate_char(char *c) {
 void validate_buffer(void *buffer, unsigned size){
   void **buffer2 = (void**) buffer;
   struct thread *t = thread_current();
-  for(unsigned i = 0; i < size; i++){
-    validate_ptr(*(buffer2+i), t);
+  for(unsigned i = 0; i < size; i+=1){
+    validate_ptr(*buffer2+i, t);
   }
 }
+
 
 // ptr can be dereferenced after passing this test
 void validate_ptr(void *f, struct thread *t){
@@ -203,17 +202,14 @@ int read (int fd, void *buffer, unsigned size){
     return read_from_console(buffer2, size);
   }
   // if fd is outside it's range
-  if(fd > 129 || fd < 2){
+  if(fd >= 130 || fd < 2){
     return -1;
   }
   else{
     struct file *file = thread_get_file(fd);
     if(file == NULL) return -1;
     // file_read reads SIZE bytes from FILE into BUFFER
-
-
     int read_bytes = file_read(file, buffer2, size);
-    if(read_bytes == 0) return -1;
     return read_bytes;
   }
 }
@@ -230,11 +226,6 @@ int read_from_console(void* buffer, unsigned size){
 }
 
 int write(int fd, const char *buffer, unsigned size){
-  // If 1, then write to console
-  // printf("%d, fd\n", fd);
-  // printf("%u, size med d\n", size);
-
- //casting and dereferencing like a BOSS
   const char *buffer2 =  *((const char**)buffer);
   if(fd == 1){
     putbuf(buffer2, (size_t)size);
@@ -242,7 +233,7 @@ int write(int fd, const char *buffer, unsigned size){
   }
 
   // if fd is outside it's range
-  if(fd >= 130 && fd <= 1){
+  if(fd >= 130 || fd < 2){
     return -1;
   }
 
@@ -251,16 +242,17 @@ int write(int fd, const char *buffer, unsigned size){
 
   // File_writes SIZE bytes from BUFFER into FILE
   int written_bytes = file_write(file, buffer2, size);
-  if(written_bytes == 0) return -1;
   return written_bytes;
 }
 
 void exit(int exit_status){
+    printf("%s: exit(%d)\n", thread_current()->name, exit_status);
     thread_save_exit_status(exit_status);
     thread_exit();
 }
 
 tid_t exec(const char *file){
+  if(file == NULL) return -1;
   return process_execute(file);
 }
 

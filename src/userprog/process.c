@@ -39,7 +39,12 @@ process_execute (const char *file_name)
   fn_copy = palloc_get_page (0);
   if (fn_copy == NULL)
     return TID_ERROR;
+
+
   strlcpy (fn_copy, file_name, PGSIZE);
+
+
+
 
   /* Create a new thread to execute FILE_NAME. */
 
@@ -307,8 +312,8 @@ load (char *file_name, void (**eip) (void), void **esp)
   // push arguments on stack in order
   for (token = strtok_r (file_name, " ", &save_ptr); token != NULL;
      token = strtok_r (NULL, " ", &save_ptr))
-     *esp -= (strlen(token)+1); // do +1 to include \0
      {
+       *esp -= (strlen(token)+1); // do +1 to include \0
        strlcpy(*(char**)esp, token, strlen(token)+1);
        arg_ptrs[counter] = *(char**)esp; // save adress of first char of arg
        counter ++;
@@ -335,7 +340,7 @@ load (char *file_name, void (**eip) (void), void **esp)
    /* Uncomment the following line to print some debug
      information. This will be useful when you debug the program
      stack.*/
-#define STACK_DEBUG
+//#define STACK_DEBUG
 
 #ifdef STACK_DEBUG
   printf("*esp is %p\nstack contents:\n", *esp);
