@@ -36,6 +36,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   int fd;
   int exit_status;
   pid_t pid;
+  unsigned position;
 
   switch(sys_call_number){
     case(SYS_HALT):
@@ -73,6 +74,10 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
 
     case(SYS_REMOVE):
+      validate_ptr(pointer+1, t);
+      validate_char((char*) *(pointer+1));
+      file = (char*) *(pointer+1);
+      f->eax = remove(file);
       break;
 
     case(SYS_OPEN):
@@ -84,6 +89,9 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
 
     case(SYS_FILESIZE):
+      validate_ptr(pointer+1, t);
+      fd = *(pointer+1);
+      f->eax = file_size(fd);
       break;
 
     case(SYS_READ):
@@ -110,9 +118,17 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
 
     case(SYS_SEEK):
+      validate_ptr(pointer+1, t);
+      validate_ptr(pointer+2, t);
+      fd = *(pointer+1);
+      position = (unsigned) *(pointer+2);
+      seek(fd, position);
       break;
 
     case(SYS_TELL):
+      validate_ptr(pointer+1, t);
+      fd = *(pointer+1);
+      f->eax = tell(fd);
       break;
 
     case(SYS_CLOSE):
@@ -184,7 +200,6 @@ bool create(const char *file, unsigned initial_size){
 }
 
 int open(const char *file){
-
   return thread_open_file(file);
 }
 
@@ -194,6 +209,16 @@ void close(int fd){
     }
 }
 
+// Reads (size) bytes from keyboard
+int read_from_console(void* buffer, unsigned size){
+
+  for(unsigned i = 0; i < size; i++){
+    *((uint8_t *)buffer) = input_getc();
+    buffer++;
+  }
+  return size;
+
+}
 
 int read (int fd, void *buffer, unsigned size){
   void *buffer2 =  *((void**)buffer); //LIKE A BOSS
@@ -214,16 +239,6 @@ int read (int fd, void *buffer, unsigned size){
   }
 }
 
-// Reads (size) bytes from keyboard
-int read_from_console(void* buffer, unsigned size){
-
-  for(unsigned i = 0; i < size; i++){
-      *((uint8_t *)buffer) = input_getc();
-      buffer++;
-    }
-    return size;
-
-}
 
 int write(int fd, const char *buffer, unsigned size){
   const char *buffer2 =  *((const char**)buffer);
@@ -240,8 +255,12 @@ int write(int fd, const char *buffer, unsigned size){
   struct file *file = thread_get_file(fd);
   if(file == NULL) return -1;
 
+
   // File_writes SIZE bytes from BUFFER into FILE
   int written_bytes = file_write(file, buffer2, size);
+
+
+
   return written_bytes;
 }
 
@@ -258,4 +277,37 @@ tid_t exec(const char *file){
 
 int wait(pid_t pid) {
   return process_wait(pid);
+}
+
+bool remove(const char *file_name){
+  return filesys_remove(file_name);
+}
+
+void seek(int fd, unsigned position){
+  // if fd is outside it's range
+  if(fd >= 130 || fd < 2) return -1;
+
+  struct file *file = thread_get_file(fd);
+  if (file == NULL) return;
+  if (position > (unsigned)file_length(file)) position = file_length(file); //TODO: KANSKE SKA VARA +-1 //If position exceeds file size set to end of file
+  file_seek(file, position);
+}
+
+int file_size (int fd){
+  // if fd is outside it's range
+  if(fd >= 130 || fd < 2) return -1;
+
+  struct file *file = thread_get_file(fd);
+  if (file == NULL) return -1; // TODO: FRÅGA ANNA!!!!
+  return file_length(file); //TODO: KANSKE SKA VARA +-1
+}
+
+unsigned tell (int fd){
+  // if fd is outside it's range
+  if(fd >= 130 || fd < 2) return -1;
+
+
+  struct file *file = thread_get_file(fd);
+  if (file == NULL) return -1;
+  return file_tell(file); //TODO: KANSKE SKA VARA +-1
 }

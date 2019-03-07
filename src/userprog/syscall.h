@@ -21,4 +21,8 @@ int read (int fd, void *buffer, unsigned size);
 void exit(int exit_status);
 tid_t exec(const char *file);
 int wait(pid_t pid);
+bool remove(const char *file_name);
+void seek(int fd, unsigned position);
+int file_size (int fd);
+unsigned tell (int fd);
 #endif /* userprog/syscall.h */
