@@ -285,7 +285,7 @@ bool remove(const char *file_name){
 
 void seek(int fd, unsigned position){
   // if fd is outside it's range
-  if(fd >= 130 || fd < 2) return -1;
+  if(fd >= 130 || fd < 2) return;
 
   struct file *file = thread_get_file(fd);
   if (file == NULL) return;
