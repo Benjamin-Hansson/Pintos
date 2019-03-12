@@ -157,7 +157,7 @@ dir_add (struct dir *dir, const char *name, disk_sector_t inode_sector)
     return false;
 
   /* CRITICAL SECTION */
-  acquire_dir_lock(dir->inode);
+  lock_acquire(&add_lock);
 
   /* Check that NAME is not in use. */
   if (lookup (dir, name, NULL, NULL))
@@ -183,7 +183,7 @@ dir_add (struct dir *dir, const char *name, disk_sector_t inode_sector)
 
  done:
   /* END CRITICAL SECTION */
-  release_dir_lock(dir->inode);
+  lock_release(&add_lock);
   return success;
 
 }
@@ -203,7 +203,7 @@ dir_remove (struct dir *dir, const char *name)
   ASSERT (name != NULL);
 
   /* CRITICAL SECTION */
-  acquire_dir_lock(dir->inode);
+  lock_acquire(&remove_lock);
 
   /* Find directory entry. */
   if (!lookup (dir, name, &e, &ofs))
@@ -227,7 +227,7 @@ dir_remove (struct dir *dir, const char *name)
  done:
   inode_close (inode);
   /* END CRITICAL SECTION */
-  release_dir_lock(dir->inode);
+  lock_release(&remove_lock);
   return success;
 
 }

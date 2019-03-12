@@ -289,7 +289,7 @@ void seek(int fd, unsigned position){
 
   struct file *file = thread_get_file(fd);
   if (file == NULL) return;
-  if (position > (unsigned)file_length(file)) position = file_length(file); //TODO: KANSKE SKA VARA +-1 //If position exceeds file size set to end of file
+  if (position > (unsigned)file_length(file)) position = file_length(file); //If position exceeds file size set to end of file
   file_seek(file, position);
 }
 
@@ -298,8 +298,8 @@ int file_size (int fd){
   if(fd >= 130 || fd < 2) return -1;
 
   struct file *file = thread_get_file(fd);
-  if (file == NULL) return -1; // TODO: FRÅGA ANNA!!!!
-  return file_length(file); //TODO: KANSKE SKA VARA +-1
+  if (file == NULL) return -1;
+  return file_length(file);
 }
 
 unsigned tell (int fd){
@@ -309,5 +309,5 @@ unsigned tell (int fd){
 
   struct file *file = thread_get_file(fd);
   if (file == NULL) return -1;
-  return file_tell(file); //TODO: KANSKE SKA VARA +-1
+  return file_tell(file);
 }

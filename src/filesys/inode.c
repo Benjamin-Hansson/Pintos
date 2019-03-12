@@ -43,7 +43,6 @@ struct inode
     int read_count;
 
     struct lock inode_lock;             /* Lock for inodes being shared by several processes */
-    struct lock dir_lock;               /* Lock used for adding and removing files to and from this directory */
 
   };
 
@@ -73,6 +72,7 @@ inode_init (void)
   list_init (&open_inodes);
   lock_init(&(open_inodes_lock));
 }
+
 
 /* Initializes an inode with LENGTH bytes of data and
    writes the new inode to sector SECTOR on the file system
@@ -148,8 +148,15 @@ inode_open (disk_sector_t sector)
 
   list_push_front (&open_inodes, &inode->elem);
 
-  /* Initialize. */
+  lock_init(&(inode->inode_lock));
+  // om vi inte skulle sätta sektor innan vi releasar open_inodes_lock skulle sector
+  // kunna vara NULL i en nod som precis lagts till i listan men inte hunnit initialiserats
   inode->sector = sector;
+  lock_acquire(&(inode->inode_lock));
+
+  lock_release(&(open_inodes_lock));
+
+  /* Initialize. */
   inode->open_cnt = 1;
   inode->deny_write_cnt = 0;
   inode->removed = false;
@@ -159,11 +166,10 @@ inode_open (disk_sector_t sector)
   sema_init(&(inode->rmutex), 1);
   inode->read_count = 0;
 
-  lock_init(&(inode->dir_lock));
-  lock_init(&(inode->inode_lock));
 
   disk_read (filesys_disk, inode->sector, &inode->data);
-  lock_release(&(open_inodes_lock));
+
+  lock_release(&(inode->inode_lock));
   return inode;
 }
 
@@ -198,11 +204,11 @@ inode_close (struct inode *inode)
   if (inode == NULL)
     return;
 
-  lock_acquire(&(open_inodes_lock));
   lock_acquire(&(inode->inode_lock));
   /* Release resources if this was the last opener. */
   if (--inode->open_cnt == 0)
     {
+      lock_acquire(&(open_inodes_lock));
       /* Remove from inode list and release lock. */
       list_remove (&inode->elem);
 
@@ -215,11 +221,8 @@ inode_close (struct inode *inode)
         }
       lock_release(&(inode->inode_lock));
       free (inode);
-    }
-    else {
-      lock_release(&(inode->inode_lock));
-    }
-  lock_release(&(open_inodes_lock));
+      lock_release(&(open_inodes_lock));
+    } else   lock_release(&(inode->inode_lock));
 }
 
 /* Marks INODE to be deleted when it is closed by the last caller who
@@ -229,8 +232,9 @@ inode_remove (struct inode *inode)
 {
 
   ASSERT (inode != NULL);
-
+  lock_acquire(&(inode->inode_lock));
   inode->removed = true;
+  lock_release(&(inode->inode_lock));
 
 }
 
@@ -373,14 +377,6 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
   return bytes_written;
 }
 
-void acquire_dir_lock(struct inode *inode){
-  lock_acquire(&(inode->dir_lock));
-}
-
-void release_dir_lock(struct inode *inode){
-  lock_release(&(inode->dir_lock));
-}
-
 
 /* Disables writes to INODE.
    May be called at most once per inode opener. */
@@ -411,4 +407,15 @@ off_t
 inode_length (const struct inode *inode)
 {
   return inode->data.length;
+
+}
+
+
+
+
+bool marked_as_removed(struct inode *inode){
+    lock_acquire(&(inode->inode_lock));
+    bool removed = inode->removed;
+    lock_release(&(inode->inode_lock));
+    return removed;
 }

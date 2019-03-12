@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include "devices/disk.h"
+#include "threads/synch.h"
 
 /* Maximum length of a file name component.
    This is the traditional UNIX maximum length.
@@ -12,6 +13,11 @@
 #define NAME_MAX 14
 
 struct inode;
+
+struct lock remove_lock;
+struct lock add_lock;
+
+
 
 /* Opening and closing directories. */
 bool dir_create (disk_sector_t sector, size_t entry_cnt);
